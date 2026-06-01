@@ -10,6 +10,8 @@
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
+  <!-- Tally 팝업 폼 -->
+  <script async src="https://tally.so/widgets/embed.js"></script>
   <style>
 /* ═══════════════════════════════════════════
    0. TOKENS & RESET
@@ -509,7 +511,7 @@ footer { padding:70px 64px 48px; max-width:1240px; margin:0 auto; }
     <a href="#trust">신뢰</a>
     <a href="#cta">사전예약</a>
   </div>
-  <button class="nav-cta mag-btn" data-scroll-to="cta">사전예약 신청 →</button>
+  <button class="nav-cta mag-btn" data-tally-open="zxLLA0" data-tally-overlay="1" data-tally-width="480">사전예약 신청 →</button>
 </nav>
 
 <!-- ─── HERO ─── -->
@@ -528,7 +530,7 @@ footer { padding:70px 64px 48px; max-width:1240px; margin:0 auto; }
     </h1>
     <p class="hero-desc">임신부터 성장까지, 소중한 기억이 사라지기 전에<br />TODAK가 함께 기록합니다.</p>
     <div class="hero-actions">
-      <button class="btn-primary mag-btn" data-scroll-to="cta">사전예약 신청하기</button>
+      <button class="btn-primary mag-btn" data-tally-open="zxLLA0" data-tally-overlay="1" data-tally-width="480">사전예약 신청하기</button>
       <button class="btn-outline mag-btn" data-scroll-to="features">기능 살펴보기</button>
     </div>
   </div>
@@ -741,10 +743,15 @@ footer { padding:70px 64px 48px; max-width:1240px; margin:0 auto; }
   <div class="gs-reveal">
     <h2>지금 사전예약하고<br/>특별한 혜택을 받으세요</h2>
     <p>출시 알림 + 얼리버드 6개월 무료 + 프리미엄 테마 증정</p>
-    <form class="cta-form" onsubmit="handleSubmit(event)">
-      <input class="cta-input" type="email" placeholder="이메일 주소를 입력해주세요" required id="emailInput" />
-      <button class="cta-btn mag-btn" type="submit">사전예약 신청 →</button>
-    </form>
+    <div style="margin-bottom:28px;">
+      <button class="cta-btn mag-btn"
+              data-tally-open="zxLLA0"
+              data-tally-overlay="1"
+              data-tally-width="480"
+              style="padding:18px 52px;font-size:16px;font-weight:700;">
+        사전예약 신청하기 →
+      </button>
+    </div>
     <p class="cta-note">✓ 스팸 없음 &nbsp;·&nbsp; ✓ 언제든지 취소 가능 &nbsp;·&nbsp; ✓ 출시 때 가장 먼저 알림</p>
   </div>
 </section>
