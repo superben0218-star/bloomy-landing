@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bloomy — 우리 아이의 모든 순간을 담다</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
+  <style>
+/* ═══════════════════════════════════════════
+   0. TOKENS & RESET
+═══════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:          #F3EAE0;
+  --bg-card:     #F9F4EE;
+  --rose:        #C8856A;
+  --rose-lt:     #E8C9B8;
+  --rose-deep:   #B05C40;
+  --sage:        #7A9878;
+  --sage-lt:     #BDD0BA;
+  --purple:      #9880A8;
+  --purple-lt:   #CFBEDD;
+  --peach:       #E8BF9E;
+  --text:        #2A1E18;
+  --text-sub:    #6A5A50;
+  --shadow:      0 12px 40px rgba(160,100,60,.10);
+  --shadow-sm:   0 4px 18px rgba(160,100,60,.07);
+  --ease:        cubic-bezier(.16,1,.3,1);
+}
+html { scroll-behavior: auto; }
+body {
+  font-family: 'Pretendard', -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.65;
+  overflow-x: hidden;
+}
+h1,h2,h3 { font-family:'Nanum Myeongjo',serif; letter-spacing:-.02em; }
+img { display:block; max-width:100%; }
+a { color:inherit; text-decoration:none; }
+
+/* ═══════════════════════════════════════════
+   1. GRAIN OVERLAY
+═══════════════════════════════════════════ */
+#grain {
+  position: fixed; inset: 0; z-index: 9002; pointer-events: none;
+  opacity: .042;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 220px 220px;
+}
+
+/* ═══════════════════════════════════════════
+   2. CUSTOM CURSOR
+═══════════════════════════════════════════ */
+@media (hover:hover) and (pointer:fine) {
+  *, *::before, *::after { cursor: none !important; }
+}
+#cursor-dot, #cursor-ring { display: none; }
+@media (hover:hover) and (pointer:fine) {
+  #cursor-dot, #cursor-ring { display: block; }
+}
+#cursor-dot {
+  position: fixed; z-index: 9999; pointer-events: none;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--rose-deep);
+  transform: translate(-50%,-50%);
+  transition: transform .12s var(--ease), background .2s;
+  will-change: left, top;
+}
+#cursor-ring {
+  position: fixed; z-index: 9998; pointer-events: none;
+  width: 40px; height: 40px; border-radius: 50%;
+  border: 1.5px solid var(--rose-deep);
+  transform: translate(-50%,-50%);
+  transition: width .35s var(--ease), height .35s var(--ease),
+              background .35s var(--ease), border-color .25s,
+              opacity .3s;
+  will-change: left, top;
+  display: flex; align-items: center; justify-content: center;
+}
+/* hover state */
+#cursor-ring.is-hover {
+  width: 64px; height: 64px;
+  background: rgba(176,92,64,.10);
+}
+/* view label state */
+#cursor-ring.is-view {
+  width: 76px; height: 76px;
+  background: rgba(176,92,64,.12);
+}
+#cursor-ring .cursor-label {
+  font-size: 10px; font-weight: 700; color: var(--rose-deep);
+  letter-spacing: .06em; text-transform: uppercase;
+  opacity: 0; transition: opacity .25s;
+  pointer-events: none; user-select: none;
+  position: absolute;
+}
+#cursor-ring.is-view .cursor-label { opacity: 1; }
+/* blend state for dark sections */
+#cursor-ring.is-blend {
+  mix-blend-mode: difference;
+  border-color: #fff;
+  background: rgba(255,255,255,.15);
+}
+#cursor-dot.is-blend {
+  mix-blend-mode: difference;
+  background: #fff;
+}
+
+/* ═══════════════════════════════════════════
+   3. REVEAL PRIMITIVES
+═══════════════════════════════════════════ */
+.line-wrap   { display:block; overflow:hidden; padding-bottom:.05em; margin-bottom:-.05em; }
+.line-inner  { display:block; opacity:0; }
+.gs-reveal   { opacity:0; }
+.gs-reveal-left  { opacity:0; }
+.gs-reveal-right { opacity:0; }
+.gs-stagger-item { opacity:0; }
+.tilt-card   { transform-style:preserve-3d; will-change:transform; }
+.mag-btn     { position:relative; display:inline-flex; }
+
+/* ═══════════════════════════════════════════
+   4. NAV
+═══════════════════════════════════════════ */
+nav {
+  position:fixed; top:0; left:0; right:0; z-index:100;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:18px 56px;
+  background: rgba(243,234,224,.88);
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba(160,100,60,.08);
+  transition: box-shadow .4s var(--ease);
+}
+nav.scrolled { box-shadow: var(--shadow-sm); }
+.nav-logo { display:flex; align-items:center; gap:10px; }
+.nav-logo .logo-icon { font-size:24px; }
+.nav-logo span { font-family:'Nanum Myeongjo',serif; font-size:20px; font-weight:700; color:var(--rose-deep); }
+.nav-links { display:flex; gap:36px; font-size:13.5px; font-weight:500; color:var(--text-sub); }
+.nav-links a { transition:color .2s; position:relative; }
+.nav-links a::after {
+  content:''; position:absolute; left:0; bottom:-2px; width:0; height:1px;
+  background:var(--rose-deep); transition:width .35s var(--ease);
+}
+.nav-links a:hover { color:var(--rose-deep); }
+.nav-links a:hover::after { width:100%; }
+.nav-cta {
+  background: linear-gradient(135deg,var(--rose),var(--purple));
+  color:#fff; border:none; border-radius:50px;
+  padding:11px 26px; font-size:13.5px; font-weight:600;
+  transition: box-shadow .3s var(--ease), opacity .2s;
+}
+.nav-cta:hover { box-shadow:0 6px 22px rgba(160,100,60,.28); opacity:.92; }
+
+/* ═══════════════════════════════════════════
+   5. HERO
+═══════════════════════════════════════════ */
+#hero {
+  min-height:100vh;
+  display:flex; align-items:center; justify-content:center;
+  padding:130px 64px 90px;
+  gap:88px;
+  position:relative; overflow:hidden;
+}
+.hero-blob {
+  position:absolute; border-radius:50%; pointer-events:none; will-change:transform;
+}
+.hero-blob-1 { width:680px; height:680px; top:-180px; right:-110px;
+  background:radial-gradient(circle,rgba(200,133,106,.20) 0%,transparent 68%); }
+.hero-blob-2 { width:480px; height:480px; bottom:-110px; left:-90px;
+  background:radial-gradient(circle,rgba(152,128,168,.16) 0%,transparent 68%); }
+.hero-blob-3 { width:300px; height:300px; top:38%; left:36%;
+  background:radial-gradient(circle,rgba(122,152,120,.13) 0%,transparent 72%); }
+/* mouse-following spotlight */
+#hero-spotlight {
+  position:absolute; pointer-events:none; will-change:transform;
+  width:640px; height:640px; border-radius:50%;
+  background:radial-gradient(circle,rgba(200,133,106,.13) 0%,transparent 62%);
+  filter:blur(24px);
+  transform:translate(-50%,-50%);
+  opacity:0; transition:opacity 1s;
+}
+.hero-text { flex:1; max-width:540px; position:relative; z-index:1; }
+.hero-badge {
+  display:inline-flex; align-items:center; gap:6px;
+  background:rgba(200,133,106,.10); border:1px solid rgba(200,133,106,.22);
+  color:var(--rose-deep); border-radius:50px; padding:7px 18px;
+  font-size:12.5px; font-weight:600; margin-bottom:32px;
+  opacity:0;
+}
+.hero-text h1 {
+  font-size:clamp(52px,7.5vw,94px);
+  font-weight:800; line-height:1.06; letter-spacing:-.035em;
+  margin-bottom:28px; color:var(--text);
+}
+.hero-text h1 em {
+  font-style:normal;
+  background:linear-gradient(135deg,var(--rose-deep),var(--purple));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+}
+.hero-desc { font-size:17px; color:var(--text-sub); margin-bottom:44px; line-height:1.85; opacity:0; }
+.hero-actions { display:flex; gap:14px; flex-wrap:wrap; opacity:0; }
+.btn-primary {
+  background:linear-gradient(135deg,var(--rose),var(--purple));
+  color:#fff; border:none; border-radius:50px;
+  padding:17px 38px; font-size:15.5px; font-weight:700;
+  transition:box-shadow .3s var(--ease), opacity .2s;
+  white-space:nowrap;
+}
+.btn-primary:hover { box-shadow:0 12px 32px rgba(160,90,60,.30); opacity:.92; }
+.btn-outline {
+  background:transparent; border:1.5px solid var(--rose-lt);
+  color:var(--rose-deep); border-radius:50px;
+  padding:15px 32px; font-size:15.5px; font-weight:600;
+  transition:background .25s var(--ease), border-color .25s;
+}
+.btn-outline:hover { background:rgba(200,133,106,.07); border-color:var(--rose); }
+
+/* phone mockup */
+.hero-mockup { flex-shrink:0; position:relative; z-index:1; will-change:transform; }
+.phone-frame {
+  width:282px; height:584px; background:#19192C;
+  border-radius:46px; padding:12px;
+  box-shadow:0 48px 96px rgba(50,20,10,.28), 0 0 0 1px rgba(255,255,255,.08) inset;
+  position:relative;
+}
+.phone-screen { width:100%; height:100%; border-radius:36px; overflow:hidden; background:var(--bg-card); position:relative; }
+.phone-notch { position:absolute; top:13px; left:50%; transform:translateX(-50%); width:104px; height:28px; background:#19192C; border-radius:0 0 16px 16px; z-index:10; }
+.phone-content { padding:54px 16px 16px; height:100%; overflow:hidden; }
+.phone-status { display:flex; justify-content:space-between; font-size:10px; color:var(--text-sub); margin-bottom:20px; font-weight:600; }
+.phone-app-header { text-align:center; margin-bottom:20px; }
+.phone-app-header .tulip-icon { font-size:32px; margin-bottom:8px; }
+.phone-app-header p { font-size:9px; color:var(--text-sub); }
+.phone-app-header h3 { font-family:'Nanum Myeongjo',serif; font-size:16px; font-weight:700; line-height:1.3; }
+.phone-card { background:linear-gradient(135deg,rgba(200,133,106,.18),rgba(152,128,168,.15)); border-radius:16px; padding:14px; margin-bottom:12px; }
+.phone-card-label { font-size:9px; color:var(--text-sub); margin-bottom:4px; font-weight:600; }
+.phone-card-value { font-size:28px; font-family:'Nanum Myeongjo',serif; font-weight:700; color:var(--rose-deep); }
+.phone-card-sub { font-size:9px; color:var(--text-sub); margin-top:2px; }
+.phone-progress-bar { height:4px; background:rgba(160,100,60,.15); border-radius:2px; margin-top:10px; }
+.phone-progress-fill { height:100%; width:70%; background:linear-gradient(90deg,var(--rose-lt),var(--rose)); border-radius:2px; }
+.phone-baby { display:flex; align-items:center; gap:8px; background:rgba(255,255,255,.6); border-radius:12px; padding:8px 10px; margin-bottom:8px; }
+.phone-baby .b-icon { font-size:16px; }
+.phone-baby .b-text { font-size:9px; }
+.phone-baby .b-text strong { display:block; font-size:10px; }
+.phone-chip-row { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+.phone-chip { font-size:8px; background:rgba(200,133,106,.15); color:var(--rose-deep); border-radius:50px; padding:3px 8px; font-weight:600; }
+.deco-float { position:absolute; border-radius:50%; pointer-events:none; will-change:transform; }
+
+/* ═══════════════════════════════════════════
+   6. SECTION COMMON
+═══════════════════════════════════════════ */
+section { padding:120px 64px; max-width:1240px; margin:0 auto; }
+.section-tag {
+  display:inline-flex; align-items:center; gap:6px;
+  background:rgba(152,128,168,.11); border:1px solid rgba(152,128,168,.22);
+  color:var(--purple); border-radius:50px; padding:5px 15px;
+  font-size:11.5px; font-weight:600; margin-bottom:22px;
+  text-transform:uppercase; letter-spacing:.08em;
+}
+.section-title {
+  font-size:clamp(34px,5vw,68px); font-weight:800;
+  line-height:1.08; letter-spacing:-.03em; margin-bottom:20px;
+}
+.section-sub { font-size:16.5px; color:var(--text-sub); line-height:1.85; max-width:560px; }
+.center { text-align:center; }
+.center .section-sub { margin:0 auto; }
+
+/* ═══════════════════════════════════════════
+   7. MARQUEE STRIP
+═══════════════════════════════════════════ */
+.marquee-strip {
+  overflow:hidden; padding:26px 0;
+  border-top:1px solid rgba(160,100,60,.10);
+  border-bottom:1px solid rgba(160,100,60,.10);
+  background:var(--bg-card);
+}
+.marquee-inner { display:flex; align-items:center; width:max-content; will-change:transform; }
+.m-word {
+  font-family:'Nanum Myeongjo',serif; font-size:21px; font-weight:700;
+  color:var(--text-sub); padding:0 28px; white-space:nowrap;
+  transition:color .3s;
+}
+.m-dot { color:var(--rose-deep); font-size:14px; opacity:.45; }
+
+/* ═══════════════════════════════════════════
+   8. EMPATHY
+═══════════════════════════════════════════ */
+#empathy { background:linear-gradient(135deg,rgba(200,133,106,.05),rgba(152,128,168,.05)); border-radius:48px; }
+.empathy-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; margin-top:64px; }
+.empathy-card {
+  background:var(--bg-card); border-radius:24px; padding:36px 30px;
+  box-shadow:var(--shadow-sm); border:1px solid rgba(160,100,60,.07);
+  transition:box-shadow .35s var(--ease), transform .35s var(--ease);
+}
+.empathy-card:hover { box-shadow:var(--shadow); }
+.empathy-card .emoji { font-size:38px; margin-bottom:18px; }
+.empathy-card h3 { font-size:19px; line-height:1.3; margin-bottom:12px; }
+.empathy-card p { font-size:14px; color:var(--text-sub); line-height:1.75; }
+
+/* ═══════════════════════════════════════════
+   9. FEATURES
+═══════════════════════════════════════════ */
+.features-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:28px; margin-top:64px; }
+.feature-card {
+  background:var(--bg-card); border-radius:24px; padding:38px 30px;
+  box-shadow:var(--shadow-sm); border:1px solid rgba(160,100,60,.07);
+  transition:box-shadow .35s var(--ease); position:relative; overflow:hidden;
+}
+.feature-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:3px;
+  background:var(--accent,linear-gradient(90deg,var(--rose-lt),var(--peach)));
+}
+.feature-card:hover { box-shadow:var(--shadow); }
+.feature-icon { font-size:42px; margin-bottom:22px; }
+.feature-card h3 { font-size:21px; line-height:1.2; margin-bottom:14px; }
+.feature-card p { font-size:14px; color:var(--text-sub); line-height:1.75; }
+.feature-tag { display:inline-block; margin-top:18px; font-size:11px; font-weight:600; color:var(--rose-deep); background:rgba(200,133,106,.10); border-radius:50px; padding:3px 11px; }
+
+/* ═══════════════════════════════════════════
+   10. MEMOIR (dark · sticky pin)
+═══════════════════════════════════════════ */
+#memoir {
+  background:linear-gradient(145deg,#271C28,#1C1220);
+  color:#fff; border-radius:48px; margin:0 28px;
+  padding:110px 88px; max-width:none;
+  position:relative; overflow:hidden;
+}
+#memoir::before {
+  content:''; position:absolute; top:-200px; right:-160px;
+  width:560px; height:560px; border-radius:50%;
+  background:radial-gradient(circle,rgba(152,128,168,.12) 0%,transparent 70%);
+  pointer-events:none;
+}
+#memoir .section-tag { background:rgba(255,255,255,.07); border-color:rgba(255,255,255,.12); color:#d0b8e4; }
+#memoir .section-title { color:#fff; }
+#memoir .section-sub { color:rgba(255,255,255,.55); }
+.memoir-cards { display:flex; gap:24px; margin-top:64px; }
+.memoir-card {
+  flex:1; border-radius:22px; overflow:hidden;
+  background:rgba(255,255,255,.055); border:1px solid rgba(255,255,255,.09);
+  padding:34px; position:relative;
+  transition:border-color .35s var(--ease), box-shadow .35s var(--ease);
+}
+.memoir-card:hover { border-color:rgba(255,255,255,.18); box-shadow:0 20px 48px rgba(0,0,0,.28); }
+.memoir-card .m-dday { font-size:11.5px; color:rgba(255,255,255,.45); margin-bottom:7px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+.memoir-card h3 { font-size:21px; color:#fff; margin-bottom:13px; }
+.memoir-card p { font-size:13px; color:rgba(255,255,255,.45); line-height:1.75; }
+.memoir-badge {
+  position:absolute; top:22px; right:22px;
+  background:linear-gradient(135deg,var(--rose),var(--purple));
+  color:#fff; border-radius:50px; padding:4px 13px; font-size:11px; font-weight:700;
+}
+.memoir-preview {
+  margin-top:22px; padding:16px; background:rgba(255,255,255,.04);
+  border-radius:12px; font-size:12.5px; color:rgba(255,255,255,.45);
+  line-height:1.65; border-left:2px solid rgba(200,133,106,.35);
+}
+
+/* ═══════════════════════════════════════════
+   11. AI SECTION
+═══════════════════════════════════════════ */
+#ai-section { display:flex; gap:88px; align-items:center; }
+.ai-visual { flex:0 0 auto; position:relative; }
+.ai-chat-window {
+  width:330px; background:var(--bg-card); border-radius:28px;
+  padding:26px; box-shadow:var(--shadow); border:1px solid rgba(160,100,60,.09);
+}
+.ai-chat-header { display:flex; align-items:center; gap:12px; margin-bottom:20px; padding-bottom:16px; border-bottom:1px solid rgba(160,100,60,.10); }
+.ai-avatar { width:42px; height:42px; border-radius:50%; background:linear-gradient(135deg,var(--rose-lt),var(--purple-lt)); display:flex; align-items:center; justify-content:center; font-size:20px; }
+.ai-name { font-weight:700; font-size:15px; }
+.ai-status { font-size:11.5px; color:var(--sage); font-weight:500; }
+.chat-bubble { border-radius:16px; padding:13px 16px; margin-bottom:10px; font-size:13px; line-height:1.65; max-width:85%; }
+.chat-bubble.user { background:linear-gradient(135deg,var(--rose),var(--purple)); color:#fff; margin-left:auto; border-bottom-right-radius:4px; }
+.chat-bubble.ai { background:rgba(160,100,60,.08); color:var(--text); border-bottom-left-radius:4px; }
+.chat-time { font-size:10px; color:var(--text-sub); margin-bottom:10px; }
+.ai-content { flex:1; }
+.co-cards { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:42px; }
+.co-card {
+  background:var(--bg-card); border-radius:22px; padding:26px;
+  box-shadow:var(--shadow-sm); border:1px solid rgba(160,100,60,.07);
+  transition:box-shadow .3s var(--ease);
+}
+.co-card:hover { box-shadow:var(--shadow); }
+.co-card .co-icon { font-size:28px; margin-bottom:13px; }
+.co-card h4 { font-size:15px; font-weight:700; margin-bottom:7px; }
+.co-card p { font-size:13px; color:var(--text-sub); line-height:1.65; }
+
+/* ═══════════════════════════════════════════
+   12. TRUST
+═══════════════════════════════════════════ */
+#trust { background:rgba(122,152,120,.05); border-radius:48px; }
+.trust-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:24px; margin-top:64px; }
+.trust-item {
+  text-align:center; padding:34px 22px; background:var(--bg-card);
+  border-radius:22px; box-shadow:var(--shadow-sm);
+  transition:box-shadow .3s var(--ease);
+}
+.trust-item:hover { box-shadow:var(--shadow); }
+.trust-item .t-icon { font-size:38px; margin-bottom:16px; }
+.trust-item h4 { font-size:16px; font-weight:700; margin-bottom:9px; }
+.trust-item p { font-size:13px; color:var(--text-sub); line-height:1.65; }
+
+/* ═══════════════════════════════════════════
+   13. CTA
+═══════════════════════════════════════════ */
+#cta {
+  background:linear-gradient(135deg,var(--rose-deep),var(--purple));
+  border-radius:48px; margin:0 28px;
+  padding:110px 88px; max-width:none; text-align:center;
+}
+#cta h2 { color:#fff; font-size:clamp(32px,5vw,60px); margin-bottom:18px; line-height:1.1; }
+#cta p { color:rgba(255,255,255,.72); font-size:18px; margin-bottom:52px; }
+.cta-form { display:flex; gap:12px; max-width:520px; margin:0 auto 26px; }
+.cta-input {
+  flex:1; padding:17px 26px; border-radius:50px;
+  border:1.5px solid transparent; background:rgba(255,255,255,.14);
+  color:#fff; font-size:15px; font-family:'Pretendard',sans-serif;
+  outline:none; transition:border-color .25s, background .25s;
+}
+.cta-input::placeholder { color:rgba(255,255,255,.45); }
+.cta-input:focus { border-color:rgba(255,255,255,.45); background:rgba(255,255,255,.20); }
+.cta-btn {
+  background:#fff; color:var(--rose-deep);
+  border:none; border-radius:50px; padding:17px 34px;
+  font-size:15px; font-weight:700;
+  transition:box-shadow .3s var(--ease), opacity .2s;
+  white-space:nowrap;
+}
+.cta-btn:hover { box-shadow:0 10px 28px rgba(0,0,0,.18); opacity:.94; }
+.cta-note { color:rgba(255,255,255,.45); font-size:13px; }
+
+/* ═══════════════════════════════════════════
+   14. TOAST
+═══════════════════════════════════════════ */
+.toast {
+  position:fixed; bottom:36px; right:36px; z-index:999;
+  background:var(--text); color:#fff; border-radius:16px; padding:18px 26px;
+  font-size:14px; font-weight:500;
+  transform:translateY(90px); opacity:0;
+  transition:all .45s cubic-bezier(.34,1.56,.64,1); pointer-events:none;
+}
+.toast.show { transform:none; opacity:1; }
+
+/* ═══════════════════════════════════════════
+   15. FOOTER
+═══════════════════════════════════════════ */
+footer { padding:70px 64px 48px; max-width:1240px; margin:0 auto; }
+.footer-top { display:flex; justify-content:space-between; align-items:flex-start; padding-bottom:44px; border-bottom:1px solid rgba(160,100,60,.10); margin-bottom:36px; }
+.footer-brand .logo-icon { font-size:26px; }
+.footer-brand span { font-family:'Nanum Myeongjo',serif; font-size:22px; font-weight:700; color:var(--rose-deep); margin-left:8px; }
+.footer-brand p { margin-top:12px; font-size:13px; color:var(--text-sub); max-width:280px; line-height:1.75; }
+.footer-links { display:flex; gap:72px; }
+.footer-col h4 { font-size:11.5px; font-weight:700; margin-bottom:18px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-sub); }
+.footer-col a { display:block; font-size:14px; color:var(--text-sub); margin-bottom:11px; transition:color .2s; }
+.footer-col a:hover { color:var(--rose-deep); }
+.footer-bottom { display:flex; justify-content:space-between; align-items:center; font-size:13px; color:var(--text-sub); }
+.footer-badges { display:flex; gap:10px; }
+.footer-badge { background:rgba(122,152,120,.13); border:1px solid rgba(122,152,120,.22); color:var(--sage); border-radius:50px; padding:4px 13px; font-size:11px; font-weight:600; }
+
+/* ═══════════════════════════════════════════
+   16. REDUCED MOTION & RESPONSIVE
+═══════════════════════════════════════════ */
+@media (prefers-reduced-motion:reduce) {
+  *,*::before,*::after { animation-duration:.01ms !important; transition-duration:.1s !important; }
+  .gs-reveal,.gs-reveal-left,.gs-reveal-right,.gs-stagger-item,
+  .line-inner,.hero-badge,.hero-desc,.hero-actions { opacity:1 !important; transform:none !important; }
+  .hero-blob,.deco-float { display:none; }
+  #cursor-dot,#cursor-ring { display:none !important; }
+}
+@media (max-width:960px) {
+  nav { padding:14px 24px; }
+  .nav-links { display:none; }
+  #hero { flex-direction:column; padding:110px 28px 64px; gap:52px; text-align:center; }
+  .hero-actions { justify-content:center; }
+  section { padding:72px 28px; }
+  .empathy-grid,.features-grid { grid-template-columns:1fr; }
+  .trust-grid { grid-template-columns:repeat(2,1fr); }
+  .memoir-cards { flex-direction:column; }
+  #ai-section { flex-direction:column; gap:40px; }
+  .ai-chat-window { width:100%; }
+  .co-cards { grid-template-columns:1fr; }
+  #memoir,#cta { margin:0 14px; padding:64px 36px; }
+  .cta-form { flex-direction:column; }
+  .footer-top { flex-direction:column; gap:44px; }
+  .footer-links { gap:36px; flex-wrap:wrap; }
+}
+  </style>
+</head>
+<body>
+
+<!-- cursor -->
+<div id="cursor-dot"></div>
+<div id="cursor-ring"><span class="cursor-label">보기</span></div>
+<!-- grain -->
+<div id="grain" aria-hidden="true"></div>
+
+<!-- ─── NAV ─── -->
+<nav id="navbar">
+  <div class="nav-logo">
+    <span>Bloomy</span>
+  </div>
+  <div class="nav-links">
+    <a href="#features">기능</a>
+    <a href="#memoir">회고록</a>
+    <a href="#ai-section">AI</a>
+    <a href="#trust">신뢰</a>
+    <a href="#cta">사전예약</a>
+  </div>
+  <button class="nav-cta mag-btn" data-scroll-to="cta">사전예약 신청 →</button>
+</nav>
+
+<!-- ─── HERO ─── -->
+<section id="hero" style="max-width:none;margin:0;">
+  <div class="hero-blob hero-blob-1" id="blob1"></div>
+  <div class="hero-blob hero-blob-2" id="blob2"></div>
+  <div class="hero-blob hero-blob-3" id="blob3"></div>
+  <div id="hero-spotlight"></div>
+
+  <div class="hero-text">
+    <div class="hero-badge">2024년 출시 예정</div>
+    <h1>
+      <span class="line-wrap"><span class="line-inner">우리 아이의</span></span>
+      <span class="line-wrap"><span class="line-inner"><em>모든 순간</em>을</span></span>
+      <span class="line-wrap"><span class="line-inner">담아두는 곳</span></span>
+    </h1>
+    <p class="hero-desc">임신부터 성장까지, 소중한 기억이 사라지기 전에<br />Bloomy가 함께 기록합니다.</p>
+    <div class="hero-actions">
+      <button class="btn-primary mag-btn" data-scroll-to="cta">사전예약 신청하기</button>
+      <button class="btn-outline mag-btn" data-scroll-to="features">기능 살펴보기</button>
+    </div>
+  </div>
+
+  <div class="hero-mockup" id="heroMockup" data-cursor="view">
+    <div class="deco-float" id="deco1" style="width:84px;height:84px;background:radial-gradient(circle,rgba(200,133,106,.30),transparent);top:-32px;right:-22px;"></div>
+    <div class="deco-float" id="deco2" style="width:54px;height:54px;background:radial-gradient(circle,rgba(152,128,168,.24),transparent);bottom:22px;left:-32px;"></div>
+    <div class="phone-frame">
+      <div class="phone-notch"></div>
+      <div class="phone-screen">
+        <div class="phone-content">
+          <div class="phone-status"><span>9:24</span><span>83%</span></div>
+          <div class="phone-app-header">
+            <p>임신 210일 중</p>
+            <h3>예쁜 아기를<br/>만나기까지</h3>
+          </div>
+          <div class="phone-card">
+            <div class="phone-card-label">출산 예정일까지</div>
+            <div class="phone-card-value">D-84</div>
+            <div class="phone-card-sub">2026년 8월 5일</div>
+            <div class="phone-progress-bar"><div class="phone-progress-fill"></div></div>
+          </div>
+          <div class="phone-baby">
+            <div class="b-icon">🥬</div>
+            <div class="b-text"><strong>이번 주의 아기</strong>양배추 크기 · 약 38cm</div>
+          </div>
+          <div class="phone-chip-row">
+            <div class="phone-chip">🤖 AI 분석</div>
+            <div class="phone-chip">📸 사진 일기</div>
+            <div class="phone-chip">👥 공동양육</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── EMPATHY ─── -->
+<section id="empathy">
+  <div class="center gs-reveal">
+    <div class="section-tag">💬 공감</div>
+    <h2 class="section-title">이런 마음,<br/>저만 그런가요?</h2>
+    <p class="section-sub">아이를 키우는 모든 부모님의 마음을 담았습니다.</p>
+  </div>
+  <div class="empathy-grid">
+    <div class="empathy-card tilt-card gs-stagger-item">
+      <div class="emoji">😮‍💨</div>
+      <h3>"언제 뒤집었더라…<br/>기억이 안 나요"</h3>
+      <p>첫 돌, 첫 걸음마, 첫 단어. 너무 바빠서 메모하지 못한 소중한 순간들이 흐릿해집니다.</p>
+    </div>
+    <div class="empathy-card tilt-card gs-stagger-item">
+      <div class="emoji">🌙</div>
+      <h3>"새벽 세 시에도<br/>혼자 고민해요"</h3>
+      <p>38도 열이 나는데 병원에 가야 할까? 모유는 충분한 걸까? 아무도 답해주지 않는 새벽.</p>
+    </div>
+    <div class="empathy-card tilt-card gs-stagger-item">
+      <div class="emoji">💬</div>
+      <h3>"남편이랑 육아<br/>분담이 어려워요"</h3>
+      <p>누가 더 많이 하는지 말하기도 눈치 보이고, 서로 지쳐서 결국 다투게 됩니다.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ─── MARQUEE ─── -->
+<div class="marquee-strip" aria-hidden="true">
+  <div class="marquee-inner" id="marqueeInner">
+    <span class="m-word">기억</span><span class="m-dot">·</span>
+    <span class="m-word">성장</span><span class="m-dot">·</span>
+    <span class="m-word">Bloomy</span><span class="m-dot">·</span>
+    <span class="m-word">임신</span><span class="m-dot">·</span>
+    <span class="m-word">육아</span><span class="m-dot">·</span>
+    <span class="m-word">AI 분석</span><span class="m-dot">·</span>
+    <span class="m-word">회고록</span><span class="m-dot">·</span>
+    <span class="m-word">공동양육</span><span class="m-dot">·</span>
+    <span class="m-word">첫 걸음마</span><span class="m-dot">·</span>
+    <span class="m-word">기억</span><span class="m-dot">·</span>
+    <span class="m-word">성장</span><span class="m-dot">·</span>
+    <span class="m-word">Bloomy</span><span class="m-dot">·</span>
+    <span class="m-word">임신</span><span class="m-dot">·</span>
+    <span class="m-word">육아</span><span class="m-dot">·</span>
+    <span class="m-word">AI 분석</span><span class="m-dot">·</span>
+    <span class="m-word">회고록</span><span class="m-dot">·</span>
+    <span class="m-word">공동양육</span><span class="m-dot">·</span>
+    <span class="m-word">첫 걸음마</span><span class="m-dot">·</span>
+  </div>
+</div>
+
+<!-- ─── FEATURES ─── -->
+<section id="features">
+  <div class="center gs-reveal">
+    <div class="section-tag">✨ 핵심 기능</div>
+    <h2 class="section-title">모든 육아의 순간을<br/>하나의 앱으로</h2>
+    <p class="section-sub">임신부터 성장까지, 꼭 필요한 기능 6가지를 담았습니다.</p>
+  </div>
+  <div class="features-grid">
+    <div class="feature-card tilt-card gs-stagger-item" style="--accent:linear-gradient(90deg,#E8C9B8,#E8BF9E);">
+      <div class="feature-icon">🌱</div>
+      <h3>임신 단계 추적</h3>
+      <p>D-day 카운터, 주차별 아기 크기, 태동·증상 기록. 소중한 임신 280일을 하루도 빠짐없이 담아요.</p>
+      <span class="feature-tag">D-day · 주차별 아기 크기</span>
+    </div>
+    <div class="feature-card tilt-card gs-stagger-item" style="--accent:linear-gradient(90deg,#BDD0BA,#A8C8A4);">
+      <div class="feature-icon">🏆</div>
+      <h3>발달 마일스톤</h3>
+      <p>첫 뒤집기, 첫 걸음마, 첫 단어. 아이의 성장 이정표를 타임라인으로 기록하고 또래와 비교해봐요.</p>
+      <span class="feature-tag">전월령 성장 기록</span>
+    </div>
+    <div class="feature-card tilt-card gs-stagger-item" style="--accent:linear-gradient(90deg,#CFBEDD,#BAAED0);">
+      <div class="feature-icon">📝</div>
+      <h3>스마트 육아 일기</h3>
+      <p>수유·식사, 수면, 사진 일기, 병원 기록, 키·몸무게. AI 음성 입력으로 양손이 바빠도 간편하게.</p>
+      <span class="feature-tag">AI 음성 기록</span>
+    </div>
+    <div class="feature-card tilt-card gs-stagger-item" style="--accent:linear-gradient(90deg,#E8BF9E,#DAAА88);">
+      <div class="feature-icon">📖</div>
+      <h3>기념일 회고록</h3>
+      <p>100일, 6개월, 1주년에 AI가 42일치 기억을 모아 감동적인 회고록 카드를 자동으로 만들어드려요.</p>
+      <span class="feature-tag">AI 자동 생성 회고록</span>
+    </div>
+    <div class="feature-card tilt-card gs-stagger-item" style="--accent:linear-gradient(90deg,#E8C9B8,#CFBEDD);">
+      <div class="feature-icon">🤖</div>
+      <h3>AI 주간 분석</h3>
+      <p>이번 주 아이의 발달 상황, 어휘 발달 속도, 활동 패턴을 분석해 전문가 수준의 인사이트를 드려요.</p>
+      <span class="feature-tag">7일 발달 리포트</span>
+    </div>
+    <div class="feature-card tilt-card gs-stagger-item" style="--accent:linear-gradient(90deg,#BDD0BA,#CFBEDD);">
+      <div class="feature-icon">👨‍👩‍👧</div>
+      <h3>부부 공동 양육</h3>
+      <p>엄마·아빠의 활동 기여도를 시각화하고, 역할을 분담해 육아의 무게를 함께 나눠요.</p>
+      <span class="feature-tag">활동별 분담 현황</span>
+    </div>
+  </div>
+</section>
+
+<!-- ─── MEMOIR (sticky pin) ─── -->
+<section id="memoir" data-cursor="blend">
+  <div id="memoir-header">
+    <div class="section-tag">📖 회고록</div>
+    <h2 class="section-title" style="color:#fff;">기념일에 도착하는<br/>AI 회고록 편지</h2>
+    <p class="section-sub" style="color:rgba(255,255,255,.55);">42일치의 기록이 하나의 감동적인 이야기로 완성됩니다.<br/>4K 영상, SNS 카드, 사진첩까지 자동으로 만들어드려요.</p>
+  </div>
+  <div class="memoir-cards">
+    <div class="memoir-card" data-cursor="view" id="mc1">
+      <div class="m-dday">D+100</div>
+      <h3>서연이의 첫 100일</h3>
+      <div class="memoir-badge">완성됨 ✓</div>
+      <div class="memoir-preview">"처음 만난 날, 너의 작은 손이 내 손가락을 꽉 잡았을 때…"<br/>42일의 기록으로 완성된 이야기</div>
+      <p style="margin-top:13px;">4K 포토북 · SNS 카드 · 영상 슬라이드</p>
+    </div>
+    <div class="memoir-card" data-cursor="view" id="mc2">
+      <div class="m-dday">D+180</div>
+      <h3>6개월 회고록</h3>
+      <div class="memoir-badge">생성 중 ✦</div>
+      <div class="memoir-preview">"뒤집기 성공하던 날 온 가족이 환호했던 그 순간…"<br/>AI가 소중한 장면들을 모으고 있어요</div>
+      <p style="margin-top:13px;">발달 타임라인 · 성장 비교 차트</p>
+    </div>
+    <div class="memoir-card" data-cursor="view" id="mc3">
+      <div class="m-dday">D+365</div>
+      <h3>첫 번째 생일 회고록</h3>
+      <div class="memoir-badge">D-85</div>
+      <div class="memoir-preview">첫 돌을 기념하는 특별한 회고록이 만들어질 예정이에요. 기록을 쌓아갈수록 더 풍성해져요.</div>
+      <p style="margin-top:13px;">365일 여정 · 베스트 순간 TOP10</p>
+    </div>
+  </div>
+</section>
+
+<!-- ─── AI ─── -->
+<section id="ai-section" style="gap:88px;align-items:flex-start;">
+  <div class="ai-visual gs-reveal-left">
+    <div class="ai-chat-window">
+      <div class="ai-chat-header">
+        <div class="ai-avatar">🤖</div>
+        <div>
+          <div class="ai-name">다이어리 AI</div>
+          <div class="ai-status">● 온라인 · 24시간 상담 가능</div>
+        </div>
+      </div>
+      <div class="chat-bubble user">새벽 3시에 갑자기 울어서 어떻게 해야 할지 모르겠어요 😭</div>
+      <div class="chat-time" style="text-align:right;margin-right:4px;">오전 3:14</div>
+      <div class="chat-bubble ai">
+        서연이 수면 패턴을 봤을 때, 밤 2~3시 사이 자주 깨는 편이에요 💙<br/><br/>
+        <strong>지금 시도해볼 것들:</strong><br/>
+        1. 실내 온도 20~22도로 맞춰주세요<br/>
+        2. 화이트노이즈를 틀어보세요<br/>
+        3. 마지막 수유 후 30분이 지났다면 배고픔일 수 있어요
+      </div>
+      <div class="chat-time">오전 3:14</div>
+    </div>
+  </div>
+  <div class="ai-content gs-reveal-right">
+    <div class="section-tag">🤖 AI 24시간 상담</div>
+    <h2 class="section-title">새벽에도 혼자가<br/>아니에요</h2>
+    <p class="section-sub">우리 아이의 기록을 학습한 AI가 개인화된 조언을 드립니다. 일반적인 정보가 아닌, 서연이에 대한 이야기를 해드려요.</p>
+    <div class="co-cards">
+      <div class="co-card tilt-card"><div class="co-icon">📊</div><h4>AI 주간 발달 분석</h4><p>어휘 발달 속도, 수면 패턴, 활동 기여도를 7일마다 정리해드려요.</p></div>
+      <div class="co-card tilt-card"><div class="co-icon">👨‍👩‍👧</div><h4>부부 활동 분담</h4><p>누가 얼마나 참여하는지 투명하게 보여줘서 자연스럽게 균형을 맞춰요.</p></div>
+      <div class="co-card tilt-card"><div class="co-icon">🔔</div><h4>스마트 알림</h4><p>예방접종 일정, 발달 체크리스트를 잊기 전에 미리 알려드려요.</p></div>
+      <div class="co-card tilt-card"><div class="co-icon">🎙️</div><h4>AI 음성 기록</h4><p>"방금 60ml 먹였어" 한 마디로 수유 기록이 자동으로 저장돼요.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── TRUST ─── -->
+<section id="trust">
+  <div class="center gs-reveal">
+    <div class="section-tag">🔒 신뢰</div>
+    <h2 class="section-title">아이의 데이터,<br/>안심하고 맡겨주세요</h2>
+    <p class="section-sub">부모님의 가장 소중한 기억을 지키는 일을 가장 진지하게 생각합니다.</p>
+  </div>
+  <div class="trust-grid">
+    <div class="trust-item tilt-card gs-stagger-item"><div class="t-icon">🇰🇷</div><h4>100% 국내 서버</h4><p>모든 데이터는 한국 서버에만 저장됩니다. 해외 전송 없음.</p></div>
+    <div class="trust-item tilt-card gs-stagger-item"><div class="t-icon">🔐</div><h4>군사급 암호화</h4><p>AES-256 암호화로 사진·영상·일기 모두 안전하게 보호합니다.</p></div>
+    <div class="trust-item tilt-card gs-stagger-item"><div class="t-icon">🚫</div><h4>광고 없음</h4><p>데이터를 광고에 활용하거나 제3자에 판매하지 않습니다.</p></div>
+    <div class="trust-item tilt-card gs-stagger-item"><div class="t-icon">📥</div><h4>데이터 완전 소유</h4><p>언제든지 전체 데이터를 내보내거나 완전 삭제할 수 있습니다.</p></div>
+  </div>
+</section>
+
+<!-- ─── CTA ─── -->
+<section id="cta" data-cursor="blend">
+  <div class="gs-reveal">
+    <h2>지금 사전예약하고<br/>특별한 혜택을 받으세요</h2>
+    <p>출시 알림 + 얼리버드 6개월 무료 + 프리미엄 테마 증정</p>
+    <form class="cta-form" onsubmit="handleSubmit(event)">
+      <input class="cta-input" type="email" placeholder="이메일 주소를 입력해주세요" required id="emailInput" />
+      <button class="cta-btn mag-btn" type="submit">사전예약 신청 →</button>
+    </form>
+    <p class="cta-note">✓ 스팸 없음 &nbsp;·&nbsp; ✓ 언제든지 취소 가능 &nbsp;·&nbsp; ✓ 출시 때 가장 먼저 알림</p>
+  </div>
+</section>
+
+<!-- ─── FOOTER ─── -->
+<footer>
+  <div class="footer-top">
+    <div class="footer-brand">
+      <div><span>Bloomy</span></div>
+      <p>임신부터 성장까지, 우리 아이의 모든 순간을 담는 프리미엄 육아 다이어리 앱</p>
+    </div>
+    <div class="footer-links">
+      <div class="footer-col">
+        <h4>서비스</h4>
+        <a href="#features">핵심 기능</a><a href="#memoir">회고록</a>
+        <a href="#ai-section">AI 상담</a><a href="#trust">보안</a>
+      </div>
+      <div class="footer-col">
+        <h4>회사</h4>
+        <a href="#">소개</a><a href="#">블로그</a>
+        <a href="#">채용</a><a href="#">문의하기</a>
+      </div>
+      <div class="footer-col">
+        <h4>법적 고지</h4>
+        <a href="#">이용약관</a><a href="#">개인정보처리방침</a>
+        <a href="#">아동 개인정보 보호</a>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2024 Bloomy. All rights reserved.</span>
+    <div class="footer-badges">
+      <span class="footer-badge">🇰🇷 Made in Korea</span>
+      <span class="footer-badge">🔒 ISMS 인증</span>
+      <span class="footer-badge">👶 아동 안전</span>
+    </div>
+  </div>
+</footer>
+
+<div class="toast" id="toast">사전예약이 완료됐어요! 출시 때 연락드릴게요.</div>
+
+<script>
+/* ══════════════════════════════════════════════
+   INIT FLAGS
+══════════════════════════════════════════════ */
+const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const TOUCH   = !window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+const USE_CURSOR = !TOUCH && !REDUCED;
+
+gsap.registerPlugin(ScrollTrigger);
+
+/* ══════════════════════════════════════════════
+   1. LENIS
+══════════════════════════════════════════════ */
+let lenis;
+if (!REDUCED && typeof Lenis !== 'undefined') {
+  lenis = new Lenis({
+    duration: 1.2,
+    easing: t => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+    smoothWheel: true,
+    wheelMultiplier: 0.88,
+  });
+  gsap.ticker.add(time => lenis.raf(time * 1000));
+  gsap.ticker.lagSmoothing(0);
+  lenis.on('scroll', ScrollTrigger.update);
+  lenis.on('scroll', ({ scroll }) => {
+    document.getElementById('navbar').classList.toggle('scrolled', scroll > 24);
+  });
+} else {
+  window.addEventListener('scroll', () => {
+    document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 24);
+  });
+}
+
+function smoothScrollTo(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (lenis) lenis.scrollTo(el, { offset: -80, duration: 1.2 });
+  else el.scrollIntoView({ behavior: 'smooth' });
+}
+document.querySelectorAll('[data-scroll-to]').forEach(btn =>
+  btn.addEventListener('click', e => { e.preventDefault(); smoothScrollTo(btn.dataset.scrollTo); })
+);
+document.querySelectorAll('a[href^="#"]').forEach(a =>
+  a.addEventListener('click', e => {
+    const id = a.getAttribute('href').slice(1);
+    if (!id) return;
+    e.preventDefault();
+    smoothScrollTo(id);
+  })
+);
+
+/* ══════════════════════════════════════════════
+   2. CUSTOM CURSOR
+══════════════════════════════════════════════ */
+if (USE_CURSOR) {
+  const dot  = document.getElementById('cursor-dot');
+  const ring = document.getElementById('cursor-ring');
+  let mx = -100, my = -100;   // raw mouse
+  let rx = -100, ry = -100;   // ring (lerped)
+  const LERP = 0.12;
+
+  window.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+
+  (function cursorLoop() {
+    // dot: instant
+    dot.style.left  = mx + 'px';
+    dot.style.top   = my + 'px';
+    // ring: lerp
+    rx += (mx - rx) * LERP;
+    ry += (my - ry) * LERP;
+    ring.style.left = rx + 'px';
+    ring.style.top  = ry + 'px';
+    requestAnimationFrame(cursorLoop);
+  })();
+
+  function setCursorState(state) {
+    ring.classList.remove('is-hover', 'is-view', 'is-blend');
+    dot.classList.remove('is-blend');
+    if (state === 'hover') ring.classList.add('is-hover');
+    if (state === 'view')  ring.classList.add('is-view');
+    if (state === 'blend') { ring.classList.add('is-blend'); dot.classList.add('is-blend'); }
+  }
+
+  // Interactive element detection
+  document.querySelectorAll('a, button, .nav-cta, .mag-btn, .nav-links a').forEach(el => {
+    el.addEventListener('mouseenter', () => setCursorState('hover'));
+    el.addEventListener('mouseleave', () => setCursorState('default'));
+  });
+  document.querySelectorAll('[data-cursor="view"]').forEach(el => {
+    el.addEventListener('mouseenter', () => setCursorState('view'));
+    el.addEventListener('mouseleave', () => setCursorState('default'));
+  });
+  document.querySelectorAll('[data-cursor="blend"]').forEach(el => {
+    el.addEventListener('mouseenter', () => setCursorState('blend'));
+    el.addEventListener('mouseleave', () => setCursorState('default'));
+  });
+
+  // Show on first mouse move
+  window.addEventListener('mousemove', () => {
+    dot.style.opacity = '1'; ring.style.opacity = '1';
+  }, { once: true });
+  dot.style.opacity  = '0';
+  ring.style.opacity = '0';
+}
+
+/* ══════════════════════════════════════════════
+   3. HERO SPOTLIGHT
+══════════════════════════════════════════════ */
+if (!REDUCED && !TOUCH) {
+  const spotlight = document.getElementById('hero-spotlight');
+  const heroEl    = document.getElementById('hero');
+  let spTX = 0, spTY = 0, spCX = 0, spCY = 0;
+
+  heroEl.addEventListener('mouseenter', () => { spotlight.style.opacity = '1'; });
+  heroEl.addEventListener('mouseleave', () => { spotlight.style.opacity = '0'; });
+  heroEl.addEventListener('mousemove', e => {
+    const r = heroEl.getBoundingClientRect();
+    spTX = e.clientX - r.left;
+    spTY = e.clientY - r.top;
+  });
+
+  (function spotLoop() {
+    spCX += (spTX - spCX) * 0.055;
+    spCY += (spTY - spCY) * 0.055;
+    gsap.set(spotlight, { x: spCX - 320, y: spCY - 320 });
+    requestAnimationFrame(spotLoop);
+  })();
+}
+
+/* ══════════════════════════════════════════════
+   4. ALL-HEADING LINE SPLIT (h2.section-title)
+══════════════════════════════════════════════ */
+if (!REDUCED) {
+  document.querySelectorAll('.section-title').forEach(heading => {
+    const raw = heading.innerHTML;
+    const parts = raw.split(/<br\s*\/?>/i);
+    if (parts.length > 1) {
+      heading.innerHTML = parts.map(p =>
+        `<span class="line-wrap"><span class="line-inner">${p.trim()}</span></span>`
+      ).join('');
+    } else {
+      heading.innerHTML = `<span class="line-wrap"><span class="line-inner">${raw}</span></span>`;
+    }
+  });
+}
+
+/* ══════════════════════════════════════════════
+   5. HERO ENTRANCE ANIMATIONS
+══════════════════════════════════════════════ */
+if (!REDUCED) {
+  // h1 line reveal (already structured in HTML)
+  const heroLines = document.querySelectorAll('.hero-text .line-inner');
+  gsap.set(heroLines, { y: '108%', opacity: 0 });
+  gsap.to(heroLines, {
+    y: '0%', opacity: 1, duration: 1.05, ease: 'power4.out', stagger: 0.14, delay: 0.18,
+  });
+
+  gsap.fromTo('.hero-badge',   { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8, ease: 'power3.out', delay: 0.10 });
+  gsap.fromTo('.hero-desc',    { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8, ease: 'power3.out', delay: 0.76 });
+  gsap.fromTo('.hero-actions', { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8, ease: 'power3.out', delay: 0.92 });
+
+  // Phone mockup entrance (fade + lift)
+  const mockup = document.getElementById('heroMockup');
+  gsap.fromTo(mockup,
+    { opacity: 0, y: 64, rotateY: -12, scale: 1.04 },
+    { opacity: 1, y: 0,  rotateY: 0,   scale: 1.0,
+      duration: 1.3, ease: 'power3.out', delay: 0.42, transformPerspective: 1100 }
+  );
+  // 스크롤로 히어로 복귀 시 회전 재생
+  ScrollTrigger.create({
+    trigger: '#hero',
+    start: 'top 88%',
+    onEnterBack: () => {
+      gsap.fromTo(mockup,
+        { rotateY: -14, scale: 1.03 },
+        { rotateY: 0, scale: 1.0,
+          duration: 1.05, ease: 'power3.out',
+          transformPerspective: 1100, overwrite: 'auto' }
+      );
+    },
+  });
+  // Scroll parallax on phone
+  gsap.to(mockup, {
+    y: -44, rotateX: 3, ease: 'none',
+    scrollTrigger: { trigger: '#hero', start: 'top top', end: 'bottom top', scrub: 1.6 },
+  });
+
+  // Hero blob parallax (scroll + mouse)
+  const b1 = document.getElementById('blob1');
+  const b2 = document.getElementById('blob2');
+  const b3 = document.getElementById('blob3');
+  gsap.to(b1, { y: -90, ease:'none', scrollTrigger:{ trigger:'#hero', start:'top top', end:'bottom top', scrub:2.2 } });
+  gsap.to(b2, { y: -42, ease:'none', scrollTrigger:{ trigger:'#hero', start:'top top', end:'bottom top', scrub:3.1 } });
+  gsap.to(b3, { y: -65, x:22, ease:'none', scrollTrigger:{ trigger:'#hero', start:'top top', end:'bottom top', scrub:2.6 } });
+
+  let mX=0, mY=0, bx1=0, by1=0, bx2=0, by2=0;
+  if (!TOUCH) {
+    document.getElementById('hero').addEventListener('mousemove', e => {
+      const r = document.getElementById('hero').getBoundingClientRect();
+      mX = ((e.clientX - r.left) / r.width  - 0.5) * 2;
+      mY = ((e.clientY - r.top)  / r.height - 0.5) * 2;
+    });
+    (function blobMouseLoop() {
+      bx1 += (mX*20 - bx1) * 0.06; by1 += (mY*14 - by1) * 0.06;
+      bx2 += (-mX*13- bx2) * 0.04; by2 += (-mY*9 - by2) * 0.04;
+      gsap.set(b1, { x: bx1, y: by1 });
+      gsap.set(b2, { x: bx2, y: by2 });
+      gsap.set(b3, { x: mX*9, y: mY*7 });
+      requestAnimationFrame(blobMouseLoop);
+    })();
+  }
+
+  gsap.to('#deco1', { y:-20, duration:3.3, ease:'sine.inOut', yoyo:true, repeat:-1 });
+  gsap.to('#deco2', { y:-13, x:7, duration:4.6, ease:'sine.inOut', yoyo:true, repeat:-1, delay:1.3 });
+}
+
+/* ══════════════════════════════════════════════
+   6. MEMOIR STICKY PIN + SEQUENTIAL REVEAL
+══════════════════════════════════════════════ */
+if (!REDUCED) {
+  const mCards = [
+    document.getElementById('mc1'),
+    document.getElementById('mc2'),
+    document.getElementById('mc3'),
+  ];
+
+  // ── memoir 헤더: 핀과 분리된 독립 scroll reveal ──
+  gsap.fromTo('#memoir-header',
+    { opacity: 0, y: 36, filter: 'blur(6px)' },
+    { opacity: 1, y: 0,  filter: 'blur(0px)', duration: 0.95, ease: 'power3.out',
+      scrollTrigger: { trigger: '#memoir-header', start: 'top 82%', toggleActions: 'play none none none' }
+    }
+  );
+
+  // ── memoir 카드: sticky pin 동안 순차 등장 ──
+  gsap.set(mCards, { opacity: 0, y: 52, clipPath: 'inset(0 0 100% 0)' });
+
+  const memoirTl = gsap.timeline({ paused: true });
+  memoirTl
+    .to(mCards[0], { opacity:1, y:0, clipPath:'inset(0 0 0% 0)', duration:0.72, ease:'power3.out' })
+    .to(mCards[1], { opacity:1, y:0, clipPath:'inset(0 0 0% 0)', duration:0.72, ease:'power3.out' }, '-=0.42')
+    .to(mCards[2], { opacity:1, y:0, clipPath:'inset(0 0 0% 0)', duration:0.72, ease:'power3.out' }, '-=0.42');
+
+  ScrollTrigger.create({
+    trigger: '#memoir',
+    start: 'top top',
+    end: '+=520',
+    pin: true,
+    pinSpacing: true,
+    onEnter:     () => memoirTl.play(),
+    onLeaveBack: () => memoirTl.reverse(),
+  });
+}
+
+/* ══════════════════════════════════════════════
+   7. SECTION SCROLL REVEALS
+══════════════════════════════════════════════ */
+if (!REDUCED) {
+  // Section-title line-inner (all section headings)
+  document.querySelectorAll('.section-title .line-inner').forEach(li => {
+    const heading = li.closest('.section-title');
+    gsap.set(li, { y: '105%', opacity: 0 });
+    gsap.to(li, {
+      y: '0%', opacity: 1, duration: 0.95, ease: 'power4.out',
+      scrollTrigger: { trigger: heading, start: 'top 84%', toggleActions: 'play none none none' },
+    });
+  });
+
+  // gs-reveal
+  document.querySelectorAll('.gs-reveal').forEach(el => {
+    gsap.fromTo(el,
+      { opacity:0, y:48, filter:'blur(7px)' },
+      { opacity:1, y:0,  filter:'blur(0px)', duration:0.95, ease:'power3.out',
+        scrollTrigger:{ trigger:el, start:'top 86%', toggleActions:'play none none none' } }
+    );
+  });
+
+  // gs-reveal-left/right
+  document.querySelectorAll('.gs-reveal-left').forEach(el => {
+    gsap.fromTo(el,
+      { opacity:0, x:-56, filter:'blur(6px)' },
+      { opacity:1, x:0,  filter:'blur(0px)', duration:1.0, ease:'power3.out',
+        scrollTrigger:{ trigger:el, start:'top 84%', toggleActions:'play none none none' } }
+    );
+  });
+  document.querySelectorAll('.gs-reveal-right').forEach(el => {
+    gsap.fromTo(el,
+      { opacity:0, x:56, filter:'blur(6px)' },
+      { opacity:1, x:0,  filter:'blur(0px)', duration:1.0, ease:'power3.out',
+        scrollTrigger:{ trigger:el, start:'top 84%', toggleActions:'play none none none' } }
+    );
+  });
+
+  // gs-stagger grids (clip-path reveal for cards)
+  document.querySelectorAll('.empathy-grid, .features-grid, .trust-grid').forEach(grid => {
+    const items = grid.querySelectorAll('.gs-stagger-item');
+    gsap.set(items, { clipPath: 'inset(0 0 100% 0)', scale: 1.06 });
+    gsap.to(items, {
+      clipPath: 'inset(0 0 0% 0)', scale: 1.0,
+      opacity: 1, duration: 0.88, ease: 'power3.out', stagger: 0.11,
+      scrollTrigger: { trigger: grid, start: 'top 82%', toggleActions: 'play none none none' },
+    });
+  });
+}
+
+/* ══════════════════════════════════════════════
+   8. MARQUEE — scroll velocity reactive
+══════════════════════════════════════════════ */
+(function initMarquee() {
+  const inner = document.getElementById('marqueeInner');
+  if (!inner) return;
+
+  // Duplicate for seamless loop
+  const clone = inner.innerHTML;
+  inner.innerHTML = clone + clone;
+
+  // Wait for layout then measure
+  requestAnimationFrame(() => {
+    const halfW = inner.scrollWidth / 2;
+
+    const anim = gsap.fromTo(inner,
+      { x: 0 },
+      { x: -halfW, duration: 32, ease: 'none', repeat: -1 }
+    );
+
+    if (!REDUCED && lenis) {
+      let velTO;
+      lenis.on('scroll', ({ velocity }) => {
+        const absV  = Math.abs(velocity);
+        const scale = Math.max(1, Math.min(1 + absV * 0.55, 5));
+        gsap.to(anim, { timeScale: scale, duration: 0.5, ease: 'power2.out', overwrite: true });
+        clearTimeout(velTO);
+        velTO = setTimeout(() => {
+          gsap.to(anim, { timeScale: 1, duration: 1.2, ease: 'power2.out', overwrite: true });
+        }, 180);
+      });
+    }
+  });
+})();
+
+/* ══════════════════════════════════════════════
+   9. CARD 3D TILT
+══════════════════════════════════════════════ */
+if (!REDUCED && !TOUCH) {
+  document.querySelectorAll('.tilt-card').forEach(card => {
+    card.addEventListener('mousemove', e => {
+      const r  = card.getBoundingClientRect();
+      const nx = (e.clientX - r.left) / r.width  - 0.5;
+      const ny = (e.clientY - r.top)  / r.height - 0.5;
+      gsap.to(card, { rotateY: nx*9, rotateX: -ny*9, transformPerspective:880, transformOrigin:'center', duration:0.42, ease:'power2.out', overwrite:'auto' });
+    });
+    card.addEventListener('mouseleave', () => {
+      gsap.to(card, { rotateY:0, rotateX:0, duration:0.62, ease:'power3.out', overwrite:'auto' });
+    });
+  });
+}
+
+/* ══════════════════════════════════════════════
+   10. MAGNETIC BUTTONS
+══════════════════════════════════════════════ */
+if (!REDUCED && !TOUCH) {
+  document.querySelectorAll('.mag-btn').forEach(btn => {
+    btn.addEventListener('mousemove', e => {
+      const r  = btn.getBoundingClientRect();
+      const dx = (e.clientX - r.left - r.width/2)  * 0.26;
+      const dy = (e.clientY - r.top  - r.height/2) * 0.26;
+      gsap.to(btn, { x:dx, y:dy, duration:0.38, ease:'power2.out', overwrite:'auto' });
+    });
+    btn.addEventListener('mouseleave', () => {
+      gsap.to(btn, { x:0, y:0, duration:0.65, ease:'elastic.out(1,.52)', overwrite:'auto' });
+    });
+  });
+}
+
+/* ══════════════════════════════════════════════
+   11. FORM
+══════════════════════════════════════════════ */
+function handleSubmit(e) {
+  e.preventDefault();
+  const email = document.getElementById('emailInput').value;
+  const toast = document.getElementById('toast');
+  toast.textContent = `${email} 으로 출시 알림을 보내드릴게요!`;
+  toast.classList.add('show');
+  e.target.reset();
+  setTimeout(() => toast.classList.remove('show'), 4400);
+}
+
+/* ── reduced motion: instant show all ── */
+if (REDUCED) {
+  document.querySelectorAll('.gs-reveal,.gs-reveal-left,.gs-reveal-right,.gs-stagger-item,.line-inner,.hero-badge,.hero-desc,.hero-actions')
+    .forEach(el => { el.style.opacity='1'; el.style.transform='none'; el.style.clipPath='none'; el.style.filter='none'; });
+}
+</script>
+</body>
+</html>
