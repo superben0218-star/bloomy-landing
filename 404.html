@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>페이지를 찾을 수 없어요 — TODAK</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #F3EAE0; --bg-card: #F9F4EE;
+      --rose: #C8856A; --rose-deep: #B05C40;
+      --purple: #9880A8; --text: #2A1E18; --text-sub: #6A5A50;
+    }
+    body {
+      font-family: 'Pretendard', -apple-system, sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center; padding: 40px 24px;
+      word-break: keep-all;
+    }
+    .blob {
+      position: fixed; border-radius: 50%; pointer-events: none; z-index: 0;
+    }
+    .blob-1 { width: 500px; height: 500px; top: -150px; right: -100px;
+      background: radial-gradient(circle, rgba(200,133,106,.18) 0%, transparent 68%); }
+    .blob-2 { width: 380px; height: 380px; bottom: -100px; left: -80px;
+      background: radial-gradient(circle, rgba(152,128,168,.14) 0%, transparent 68%); }
+    .content { position: relative; z-index: 1; max-width: 480px; }
+    .emoji { font-size: 72px; margin-bottom: 28px; display: block; }
+    h1 {
+      font-family: 'Nanum Myeongjo', serif;
+      font-size: 42px; font-weight: 800;
+      letter-spacing: -.03em; line-height: 1.1;
+      margin-bottom: 16px;
+    }
+    h1 em {
+      font-style: normal;
+      background: linear-gradient(135deg, var(--rose-deep), var(--purple));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    p { font-size: 16px; color: var(--text-sub); line-height: 1.75; margin-bottom: 40px; }
+    .btn-group { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--rose), var(--purple));
+      color: #fff; border: none; border-radius: 50px;
+      padding: 16px 36px; font-size: 15px; font-weight: 700;
+      text-decoration: none; transition: box-shadow .3s, opacity .2s;
+    }
+    .btn-primary:hover { box-shadow: 0 12px 32px rgba(160,90,60,.28); opacity: .92; }
+    .btn-outline {
+      background: transparent; border: 1.5px solid rgba(200,133,106,.4);
+      color: var(--rose-deep); border-radius: 50px;
+      padding: 15px 32px; font-size: 15px; font-weight: 600;
+      text-decoration: none; transition: background .25s, border-color .25s;
+    }
+    .btn-outline:hover { background: rgba(200,133,106,.07); border-color: var(--rose); }
+    .code {
+      margin-top: 52px; font-size: 13px; color: rgba(106,90,80,.4);
+      font-weight: 600; letter-spacing: .1em;
+    }
+    @media (max-width: 480px) {
+      h1 { font-size: 32px; }
+      .btn-group { flex-direction: column; }
+      .btn-primary, .btn-outline { width: 100%; text-align: center; padding: 16px 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="content">
+    <span class="emoji">🌷</span>
+    <h1>페이지를<br/><em>찾을 수 없어요</em></h1>
+    <p>찾으시는 페이지가 사라졌거나<br/>주소가 바뀐 것 같아요.<br/>홈으로 돌아가서 다시 시작해보세요.</p>
+    <div class="btn-group">
+      <a href="/" class="btn-primary">홈으로 돌아가기</a>
+      <a href="/#cta" class="btn-outline">사전예약 하기</a>
+    </div>
+    <p class="code">404 NOT FOUND</p>
+  </div>
+</body>
+</html>
